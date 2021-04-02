@@ -49,18 +49,19 @@ earth_radius=6378137.0; %radius of ellipsoid, WGS84
 eccentricity=0.08181919; %eccentricity, WGS84
 north=1;%if south, north=0
 resolution=40000; %km
-lat_min=49.9058; %the min abs(latitude) in the north/south hemisphere 
+lat_min=49; %the min abs(latitude) in the north/south hemisphere 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 [lat,lon]=stereographic_lon_lat(lat_min,resolution,earth_radius,eccentricity,north);
- 
+%active_thickness=2.5*max(max(diff(lat))); 
+active_thickness=1;
 dx=min(max(abs(diff(lon))));
 dy=min(max(abs(diff(lat))));
 
   ref_grid = 'etopo1';               % reference grid source 
                                      %      etopo1 = Etopo1 grid
                                      %      etopo2 = Etopo2 grid
-  boundary = 'low';                 % Option to determine which GSHHS 
+  boundary = 'low';               % Option to determine which GSHHS 
                                      %  .mat file to load
                                      %         full = full resolution
                                      %         high = 0.2 km
@@ -188,6 +189,7 @@ dy=min(max(abs(diff(lat))));
 
 
   m2 = clean_mask(lon,lat,m,b_split,LIM_VAL,OFFSET);
+  %m2 = clean_mask(lon,lat,m,b,LIM_VAL,OFFSET);
   
  % Masking out regions defined by optional polygons
  
@@ -201,8 +203,17 @@ dy=min(max(abs(diff(lat))));
 
   fprintf(1,'.........Separating Water Bodies..................\n');
 
-  [m4,mask_map] = remove_lake(m3,LAKE_TOL,IS_GLOBAL); 
   
+  [m4,mask_map] = remove_lake(m3,LAKE_TOL,IS_GLOBAL); 
+   m4(lat<lat_min)=3;
+   [i1,j1]=find(m4==1);
+   for i=1:length(i1)
+       if lat(i1(i),j1(i))<lat_min+active_thickness
+           m4(i1(i),j1(i))=2;
+       end
+   end
+  
+
 % 4. Generate sub - grid obstruction sets in x and y direction, based on 
 %    the final land/sea mask and the coastal boundaries
     
@@ -237,7 +248,7 @@ mymap = [0.2 0.1 0.5
 
 
 width=1000;  % Width of figure for movie [pixels]
-height=1000;  % Height of figure of movie [pixels]
+height=500;  % Height of figure of movie [pixels]
 left=200;     % Left margin between figure and screen edge [pixels]
 bottom=200;  % Bottom margin between figure and screen edge [pixels]
 
@@ -291,7 +302,11 @@ geoshow(lat,lon,m4,'DisplayType','surface')
 framem
 gridm
 shading flat;
-colorbar;
+cbh=colorbar
+colormap(mymap)
+set(cbh,'XTick',[0:1:3])
+set(cbh,'XTickLabel',[0:1:3])
+caxis([-.5 3.5])
 title(['Final Land-Sea Mask ',fname],'fontsize',14);
 set(gca,'fontsize',14);
 
